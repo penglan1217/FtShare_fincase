@@ -7,8 +7,7 @@
   "observability": { "enabled": true },
   "triggers": {
     "crons": [
-      "*/5 1-3,5-7 * * MON-FRI",
-      "2 7 * * MON-FRI"
+      "* 1-3,5-7 * * MON-FRI"
     ]
   },
   "kv_namespaces": [
