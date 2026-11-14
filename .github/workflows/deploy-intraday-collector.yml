@@ -22,22 +22,42 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify Cloudflare account token
+      - name: Verify Cloudflare API token
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          response="$(curl --silent --show-error --request GET "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/verify" --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}")"
+          test -n "$CLOUDFLARE_API_TOKEN"
+          case "$CLOUDFLARE_API_TOKEN" in
+            cfat_*)
+              verify_url="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/verify"
+              token_type="account"
+              ;;
+            cfut_*)
+              verify_url="https://api.cloudflare.com/client/v4/user/tokens/verify"
+              token_type="user"
+              ;;
+            *)
+              echo "Unrecognized token prefix. Check that the complete Cloudflare API Token was saved in CLOUDFLARE_API_TOKEN."
+              exit 1
+              ;;
+          esac
+          echo "Checking Cloudflare ${token_type} API token."
+          response="$(curl --silent --show-error --request GET "$verify_url" --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}")"
           printf '%s' "$response" | node -e '
             let body = "";
             process.stdin.on("data", chunk => body += chunk);
             process.stdin.on("end", () => {
-              const data = JSON.parse(body);
-              if (!data.success || data.result?.status !== "active") {
-                console.error("Cloudflare account token verification failed:", JSON.stringify(data.errors || data));
+              let data;
+              try { data = JSON.parse(body); } catch {
+                console.error("Cloudflare returned an unreadable verification response.");
                 process.exit(1);
               }
-              console.log("Cloudflare account token is active.");
+              if (!data.success || data.result?.status !== "active") {
+                console.error("Cloudflare API token verification failed:", JSON.stringify(data.errors || data));
+                process.exit(1);
+              }
+              console.log("Cloudflare API token is active.");
             });
           '
 
