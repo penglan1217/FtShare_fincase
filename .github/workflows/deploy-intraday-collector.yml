@@ -28,21 +28,14 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
-          case "$CLOUDFLARE_API_TOKEN" in
-            cfat_*)
-              verify_url="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/verify"
-              token_type="account"
-              ;;
-            cfut_*)
-              verify_url="https://api.cloudflare.com/client/v4/user/tokens/verify"
-              token_type="user"
-              ;;
-            *)
-              echo "Unrecognized token prefix. Check that the complete Cloudflare API Token was saved in CLOUDFLARE_API_TOKEN."
-              exit 1
-              ;;
-          esac
-          echo "Checking Cloudflare ${token_type} API token."
+          if [[ ! "$CLOUDFLARE_API_TOKEN" =~ ^cfat_[A-Za-z0-9]{40}[A-Fa-f0-9]{8}$ ]]; then
+            echo "The saved value does not match Cloudflare's documented cfat_ token shape."
+            echo "Saved token character count: ${#CLOUDFLARE_API_TOKEN} (expected 53)."
+            echo "No token contents will be printed."
+            exit 1
+          fi
+          echo "Cloudflare account-token format check passed (53 characters; value hidden)."
+          verify_url="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/verify"
           response="$(curl --silent --show-error --request GET "$verify_url" --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}")"
           printf '%s' "$response" | node -e '
             let body = "";
@@ -57,7 +50,7 @@ jobs:
                 console.error("Cloudflare API token verification failed:", JSON.stringify(data.errors || data));
                 process.exit(1);
               }
-              console.log("Cloudflare API token is active.");
+              console.log("Cloudflare account API token is active.");
             });
           '
 
