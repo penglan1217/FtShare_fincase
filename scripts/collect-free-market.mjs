@@ -33,7 +33,7 @@ async function candles(tool, symbol, window) {
   return normalizeCandles(extractRows(result), symbol);
 }
 async function collectSeries(instrument, kind) {
-  const eligibleStart = instrument.listed_date && instrument.listed_date > start ? instrument.listed_date : start;
+  const eligibleStart = [start, instrument.listed_date, instrument.inception_date].filter(Boolean).sort().at(-1);
   const windows = dateWindows(eligibleStart, end, 12);
   let all = [];
   for (const window of windows) {
@@ -84,16 +84,16 @@ const indices = await mapLimit(FREE_INDEX_UNIVERSE, 2, async (index, i) => {
 });
 
 // Eastmoney ETF order-flow is a separate free-tier series. It is NOT ETF creation/redemption.
-async function optionalPaged(tool, args, label) {
+async function optionalPaged(tool, args, label, pageSize = 1000) {
   const records = [];
   try {
     for (let page = 1; page <= 20; page++) {
-      const result = await client.call(tool, { ...args, page, page_size: 1000 });
+      const result = await client.call(tool, { ...args, page, page_size: pageSize });
       const rows = extractRows(result);
       records.push(...rows);
       const pageInfo = result.data && !Array.isArray(result.data) ? result.data : {};
       const pages = Number(pageInfo.pages ?? pageInfo.total_pages ?? result.metadata?.pagination?.total_pages);
-      if (!rows.length || Number.isFinite(pages) && pages > 0 && page >= pages || rows.length < 1000) break;
+      if (!rows.length || Number.isFinite(pages) && pages > 0 && page >= pages || rows.length < pageSize) break;
     }
     return { status: 'available', records };
   } catch (error) {
@@ -141,7 +141,7 @@ if (flowStart <= flowEnd) {
 
 const dapanFlow = await optionalPaged('ft_v1_eastmoney_dapan_flow', {
   start_date: flowStart, end_date: flowEnd
-}, 'eastmoney-dapan-flow');
+}, 'eastmoney-dapan-flow', 500);
 
 const data = {
   schema: 1,
