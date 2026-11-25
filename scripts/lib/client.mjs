@@ -19,11 +19,18 @@ export async function collectorClient({ env = process.env, fetcher = fetch } = {
     try { const entry = JSON.parse(await readFile(path, 'utf8')); if (Date.now() - Date.parse(entry.captured_at) < 3600000) { hits++; return entry.result; } } catch {}
     if (inflight.has(path.href)) return inflight.get(path.href);
     const pending = (async () => {
-      const result = await readWithRetry(() => pacer.run(async () => {
-        requests++;
-        try { return await upstream.call(name, args); }
-        catch (error) { if (error.code === 'rate_limited') pacer.defer(error.retryAfterMs || 60000); throw error; }
-      }), { onLimit: ms => { pacer.defer(ms); console.log('Provider throttled ' + name + '; shared cooldown ' + Math.ceil(ms / 1000) + 's'); } });
+      let result;
+      try {
+        result = await readWithRetry(() => pacer.run(async () => {
+          requests++;
+          try { return await upstream.call(name, args); }
+          catch (error) { if (error.code === 'rate_limited') pacer.defer(error.retryAfterMs || 60000); throw error; }
+        }), { onLimit: ms => { pacer.defer(ms); console.log('Provider throttled ' + name + '; shared cooldown ' + Math.ceil(ms / 1000) + 's'); } });
+      } catch (error) {
+        error.message = 'FtShare接口 ' + name + ' 调用失败：' + error.message;
+        error.toolName = name;
+        throw error;
+      }
       await writeFile(path, JSON.stringify({ captured_at: new Date().toISOString(), request: { name, args }, result }));
       return result;
     })().finally(() => inflight.delete(path.href));
