@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dateWindows, extractRows, normalizeCandles, normalizeTradeDate, mergeByDate, dateToMillis } from '../scripts/lib/free-market.mjs';
+import { dateWindows, extractRows, normalizeCandles, normalizeTradeDate, mergeByDate, dateToMillis, completedEndDate } from '../scripts/lib/free-market.mjs';
 
 test('free market date windows stay within the 12-month provider limit and do not overlap', () => {
   const windows = dateWindows('2023-10-09', '2026-11-25');
@@ -49,4 +49,11 @@ test('newer overlapping market candles replace older rows by date', () => {
     { date: '2026-11-25', close: 12 },
     { date: '2026-11-26', close: 13 }
   ]);
+});
+
+test('free-tier daily archive excludes the unfinished current session before the close', () => {
+  const calendar = ['2026-11-23', '2026-11-24', '2026-11-25'];
+  assert.equal(completedEndDate(calendar, '2026-11-25', '13:00', null), '2026-11-24');
+  assert.equal(completedEndDate(calendar, '2026-11-25', '15:15', null), '2026-11-25');
+  assert.equal(completedEndDate(calendar, '2026-11-25', '13:00', '2026-11-24'), '2026-11-24');
 });
