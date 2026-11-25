@@ -42,18 +42,21 @@ async function collectSeries(instrument, kind) {
   for (const window of windows) {
     let rows;
     if (kind === 'index') {
-      try { rows = await candles('ft_v1_index_candlesticks', instrument.symbol, window); }
-      catch (first) {
+      let firstError;
+      try { rows = await candles('ft_v1_index_candlesticks', instrument.symbol, window); } catch (error) { firstError = error; }
+      if (!rows?.length) {
         try { rows = await candles('ft_v1_stock_candlesticks', instrument.symbol, window); }
-        catch (second) { second.message = '指数 ' + instrument.symbol + '：' + second.message; throw second; }
+        catch (second) { second.message = '指数 ' + instrument.symbol + '：' + (firstError?.message || second.message); throw second; }
       }
     } else {
-      try { rows = await candles('ft_v1_stock_candlesticks', instrument.symbol, window); }
-      catch (first) {
+      let firstError;
+      try { rows = await candles('ft_v1_stock_candlesticks', instrument.symbol, window); } catch (error) { firstError = error; }
+      if (!rows?.length) {
         try { rows = await candles('ft_v1_etf_candlesticks', instrument.symbol, window); }
-        catch (second) { second.message = 'ETF ' + instrument.symbol + '：' + second.message; throw second; }
+        catch (second) { second.message = 'ETF ' + instrument.symbol + '：' + (firstError?.message || second.message); throw second; }
       }
     }
+    if (!rows?.length) throw new Error(kind + ' ' + instrument.symbol + ' has no daily candles for ' + window.start + ' to ' + window.end);
     all = mergeByDate(all, rows);
   }
   if (!all.length) throw new Error(kind + ' ' + instrument.symbol + ' returned no daily candles');
