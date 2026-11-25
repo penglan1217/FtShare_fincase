@@ -82,7 +82,7 @@ export function completedEndDate(calendar, today, beijingTime, explicitEnd) {
     if (!iso(explicitEnd) || explicitEnd > today) throw new Error('Invalid explicit end date');
     return explicitEnd;
   }
-  if (!iso(today) || !/^\\d{2}:\\d{2}$/.test(beijingTime || '')) throw new Error('Invalid market clock');
+  if (!iso(today) || !/^\d{2}:\d{2}$/.test(beijingTime || '')) throw new Error('Invalid market clock');
   if (beijingTime < '15:10') return calendar.filter(d => d < today).at(-1) || today;
   return calendar.filter(d => d <= today).at(-1) || today;
 }
