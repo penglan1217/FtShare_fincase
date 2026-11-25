@@ -12,8 +12,8 @@ const read = async path => JSON.parse(await readFile(resolve(root, path), 'utf8'
 const config = await read('config/collection.json');
 const universe = await read('config/universe.json');
 const start = process.env.FREE_MARKET_START_DATE || config.market_start;
-const end = process.env.FREE_MARKET_END_DATE || chinaDate();
-if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start > end) throw new Error('Invalid FREE_MARKET_START_DATE / FREE_MARKET_END_DATE');
+const requestedEnd = process.env.FREE_MARKET_END_DATE || chinaDate();
+if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(requestedEnd) || start > requestedEnd) throw new Error('Invalid FREE_MARKET_START_DATE / FREE_MARKET_END_DATE');
 
 const client = await collectorClient();
 const errors = [];
