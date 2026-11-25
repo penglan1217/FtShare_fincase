@@ -172,7 +172,7 @@ const mergeRecords = (oldRows = [], newRows = [], key = row => row.date) => {
   const map = new Map();
   for (const row of oldRows || []) map.set(key(row), row);
   for (const row of newRows || []) map.set(key(row), row);
-  return [...map.values()].sort((a,b) => String(a.date).localeCompare(String(b.date)));
+  return [...map.values()].sort((a,b) => String(a.date ?? a.trade_date ?? '').localeCompare(String(b.date ?? b.trade_date ?? '')));
 };
 const mergedEtfFlow = {
   meaning: '东方财富ETF交易资金流（主力/超大单/大单等）；不是ETF份额净申购/赎回',
