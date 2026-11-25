@@ -74,8 +74,27 @@ export function createFTShare(key, fetcher = fetch, { timeoutMs = 25000, onLimit
       let s = r?.structuredContent;
       if (!s) { try { s = JSON.parse(r?.content?.find(c => c.type === 'text')?.text || '{}'); } catch { /* invalid response */ } }
       if (r?.isError || s?.error || !s || s.data === undefined) {
-        if (Number(s?.error?.upstream_code) === 429 || Number(s?.error?.status) === 429) { const e = limitedError(s.error); onLimit(e); throw e; }
-        throw new FTShareError('FtShare数据暂不可用');
+        const error = s?.error || {};
+        const providerCode = String(error.code ?? error.error_code ?? error.type ?? '').slice(0, 48);
+        const status = Number(error.status ?? error.upstream_status ?? error.http_status);
+        const upstreamCode = Number(error.upstream_code ?? status);
+        if (upstreamCode === 429 || status === 429) { const e = limitedError(error); onLimit(e); throw e; }
+        const rawMessage = String(error.message ?? error.detail ?? error.description ?? r?.content?.find(c => c.type === 'text')?.text ?? '');
+        const safeMessage = rawMessage
+          .replaceAll(key, '[redacted]')
+          .replace(/(api[_ -]?key|authorization|bearer|token)\\s*[:=]\\s*[^\\s,;]+/gi, '$1=[redacted]')
+          .replace(/\\s+/g, ' ')
+          .slice(0, 160);
+        const details = [
+          providerCode ? 'provider_code=' + providerCode : '',
+          Number.isFinite(status) ? 'HTTP ' + status : '',
+          safeMessage ? 'provider_message=' + safeMessage : ''
+        ].filter(Boolean);
+        throw new FTShareError('FtShare数据暂不可用' + (details.length ? '（' + details.join('; ') + '）' : ''), 'upstream_error', {
+          upstreamCode: providerCode || null,
+          upstreamStatus: Number.isFinite(status) ? status : undefined,
+          upstreamMessage: safeMessage || undefined
+        });
       }
       if (s.metadata?.truncated) throw new FTShareError('FtShare返回数据被截断', 'truncated');
       return s;
