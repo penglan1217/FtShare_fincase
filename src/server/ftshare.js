@@ -33,9 +33,25 @@ export function createFTShare(key, fetcher = fetch, { timeoutMs = 25000, onLimit
       }
     }
     if (!response.ok || !value || value.error) {
+      const upstreamCode = value?.error?.code === undefined ? '' : String(value.error.code).slice(0, 48);
+      const upstreamMessage = String(value?.error?.message || '')
+        .replaceAll(key, '[redacted]')
+        .replace(/(api[_ -]?key|authorization|bearer|token)\\s*[:=]\\s*[^\\s,;]+/gi, '$1=[redacted]')
+        .slice(0, 160);
       const expired = method === 'tools/call' && (response.status === 404 || /session.*(expired|invalid|not found)|invalid.*session/i.test(value?.error?.message || raw));
       if (response.status === 429) { const e = limitedError(value?.error, response.headers.get('retry-after')); onLimit(e); throw e; }
-      throw new FTShareError('FtShare请求失败', expired ? 'session_expired' : 'upstream_error');
+      const authRejected = response.status === 401 || response.status === 403;
+      const detail = [
+        'HTTP ' + response.status,
+        authRejected ? '认证被拒绝' : '',
+        upstreamCode ? 'provider_code=' + upstreamCode : '',
+        upstreamMessage ? 'provider_message=' + upstreamMessage : ''
+      ].filter(Boolean).join('; ');
+      throw new FTShareError('FtShare请求失败（' + detail + '）', expired ? 'session_expired' : 'upstream_error', {
+        upstreamStatus: response.status,
+        upstreamCode: upstreamCode || null,
+        upstreamMessage: upstreamMessage || null
+      });
     }
     return value.result;
   }
