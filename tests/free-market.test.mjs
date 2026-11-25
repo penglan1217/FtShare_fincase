@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { dateWindows, extractRows, normalizeCandles, normalizeTradeDate, mergeByDate, dateToMillis, completedEndDate } from '../scripts/lib/free-market.mjs';
 
 test('free market date windows stay within the 12-month provider limit and do not overlap', () => {
@@ -56,4 +58,10 @@ test('free-tier daily archive excludes the unfinished current session before the
   assert.equal(completedEndDate(calendar, '2026-11-25', '13:00', null), '2026-11-24');
   assert.equal(completedEndDate(calendar, '2026-11-25', '15:15', null), '2026-11-25');
   assert.equal(completedEndDate(calendar, '2026-11-25', '13:00', '2026-11-24'), '2026-11-24');
+});
+
+test('free-tier collector script parses without executing network calls', () => {
+  const script = fileURLToPath(new URL('../scripts/collect-free-market.mjs', import.meta.url));
+  const result = spawnSync(process.execPath, ['--check', script], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
 });
