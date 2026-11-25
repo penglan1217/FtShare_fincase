@@ -30,3 +30,21 @@ test('expired upstream sessions are renewed before retrying the safe read', asyn
   });
   assert.deepEqual((await ft.call('read-tool', {})).data, []); assert.equal(sessions, 2); assert.equal(calls, 2);
 });
+test('MCP business errors expose sanitized provider diagnostics without leaking the API key', async () => {
+  const secret = 'test-only-secret-key';
+  const ft = createFTShare(secret, async (_, o) => {
+    const q = JSON.parse(o.body);
+    if (q.method === 'notifications/initialized') return new Response(null, { status: 202 });
+    const result = q.method === 'initialize'
+      ? { protocolVersion: '2024-11-05' }
+      : { isError: true, structuredContent: { error: { code: 'UPSTREAM_REJECTED', status: 401, message: 'Invalid API key: ' + secret } } };
+    return new Response(JSON.stringify({ id: q.id, result }));
+  });
+  await assert.rejects(ft.call('read-tool', {}), error =>
+    error.code === 'upstream_error' &&
+    error.message.includes('UPSTREAM_REJECTED') &&
+    error.message.includes('HTTP 401') &&
+    !error.message.includes(secret) &&
+    error.message.includes('[redacted]')
+  );
+});
