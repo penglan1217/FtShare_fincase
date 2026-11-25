@@ -36,7 +36,7 @@ export function createFTShare(key, fetcher = fetch, { timeoutMs = 25000, onLimit
       const upstreamCode = value?.error?.code === undefined ? '' : String(value.error.code).slice(0, 48);
       const upstreamMessage = String(value?.error?.message || '')
         .replaceAll(key, '[redacted]')
-        .replace(/(api[_ -]?key|authorization|bearer|token)\s*[:=]\s*[^\s,;]+/gi, '$1=[redacted]')
+          .replace(/(api[_ -]?key|authorization|bearer|token)\s*[:=]\s*[^\s,;]+/gi, '$1=[redacted]')
         .slice(0, 160);
       const expired = method === 'tools/call' && (response.status === 404 || /session.*(expired|invalid|not found)|invalid.*session/i.test(value?.error?.message || raw));
       if (response.status === 429) { const e = limitedError(value?.error, response.headers.get('retry-after')); onLimit(e); throw e; }
@@ -82,8 +82,8 @@ export function createFTShare(key, fetcher = fetch, { timeoutMs = 25000, onLimit
         const rawMessage = String(error.message ?? error.detail ?? error.description ?? r?.content?.find(c => c.type === 'text')?.text ?? '');
         const safeMessage = rawMessage
           .replaceAll(key, '[redacted]')
-          .replace(/(api[_ -]?key|authorization|bearer|token)\\s*[:=]\\s*[^\\s,;]+/gi, '$1=[redacted]')
-          .replace(/\\s+/g, ' ')
+          .replace(/(api[_ -]?key|authorization|bearer|token)\s*[:=]\s*[^\s,;]+/gi, '$1=[redacted]')
+          .replace(/\s+/g, ' ')
           .slice(0, 160);
         const details = [
           providerCode ? 'provider_code=' + providerCode : '',
