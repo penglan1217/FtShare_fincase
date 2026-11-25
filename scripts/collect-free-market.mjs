@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { chinaDate, dateInt, dateISO, mapLimit } from '../src/server/model.js';
 import { collectorClient } from './lib/client.mjs';
-import { FREE_INDEX_UNIVERSE, dateWindows, dateToMillis, extractRows, mergeByDate, normalizeCandles, normalizeTradeDate } from './lib/free-market.mjs';
+import { FREE_INDEX_UNIVERSE, dateWindows, dateToMillis, extractRows, mergeByDate, normalizeCandles, normalizeTradeDate, completedEndDate } from './lib/free-market.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = async path => JSON.parse(await readFile(resolve(root, path), 'utf8'));
@@ -17,10 +17,13 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || st
 
 const client = await collectorClient();
 const errors = [];
-const calendarResult = await client.call('ft_v1_time_trading_calendar', { market: 'cn', start_date: dateInt(start), end_date: dateInt(end) });
+const calendarResult = await client.call('ft_v1_time_trading_calendar', { market: 'cn', start_date: dateInt(start), end_date: dateInt(requestedEnd) });
 const calendarData = Array.isArray(calendarResult.data) ? calendarResult.data[0] : calendarResult.data;
-const calendar = (calendarData?.trade_dates || []).map(dateISO).filter(d => d >= start && d <= end).sort();
-if (calendar.length < 2) throw new Error('Trading calendar returned fewer than two dates');
+const allCalendarDates = (calendarData?.trade_dates || []).map(dateISO).sort();
+const beijingTime = new Date(Date.now() + 8 * 3600000).toISOString().slice(11,16);
+const end = completedEndDate(allCalendarDates, chinaDate(), beijingTime, process.env.FREE_MARKET_END_DATE || null);
+const calendar = allCalendarDates.filter(d => d >= start && d <= end);
+if (calendar.length < 2) throw new Error('Trading calendar returned fewer than two completed dates');
 
 async function candles(tool, symbol, window) {
   const args = {
