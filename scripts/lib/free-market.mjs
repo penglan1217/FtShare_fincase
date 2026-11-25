@@ -77,3 +77,12 @@ export function dateToMillis(date, endOfDay = false) {
   if (!iso(date)) throw new Error('Invalid ISO date: ' + date);
   return Date.parse(date + (endOfDay ? 'T23:59:59+08:00' : 'T00:00:00+08:00'));
 }
+export function completedEndDate(calendar, today, beijingTime, explicitEnd) {
+  if (explicitEnd) {
+    if (!iso(explicitEnd) || explicitEnd > today) throw new Error('Invalid explicit end date');
+    return explicitEnd;
+  }
+  if (!iso(today) || !/^\\d{2}:\\d{2}$/.test(beijingTime || '')) throw new Error('Invalid market clock');
+  if (beijingTime < '15:10') return calendar.filter(d => d < today).at(-1) || today;
+  return calendar.filter(d => d <= today).at(-1) || today;
+}
