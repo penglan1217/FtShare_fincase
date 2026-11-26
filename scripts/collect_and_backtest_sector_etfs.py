@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import gzip
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import math
 import os
@@ -36,7 +37,7 @@ def number(value: str) -> float:
         return 0.0
 
 
-def fetch_etf(fund: dict, start: str, end: str, retries: int = 4) -> list[dict]:
+def fetch_etf(fund: dict, start: str, end: str, retries: int = 3) -> list[dict]:
     exchange, code = fund["symbol"].split(".")
     secid = ("1." if exchange == "SH" else "0.") + code
     params = {
@@ -53,7 +54,7 @@ def fetch_etf(fund: dict, start: str, end: str, retries: int = 4) -> list[dict]:
     last_error = None
     for attempt in range(retries):
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with urllib.request.urlopen(request, timeout=18) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             data = payload.get("data") or {}
             klines = data.get("klines") or []
@@ -269,16 +270,20 @@ def main() -> int:
     funds = config["funds"]
     OUT.mkdir(parents=True, exist_ok=True)
     collected, errors = {}, []
-    for n, fund in enumerate(funds, 1):
-        print(f"[{n}/15] Fetching {fund['symbol']} {fund['display_name']} ...", flush=True)
-        try:
-            rows = fetch_etf(fund, fund["listed_date"], end)
-            collected[fund["symbol"]] = rows
-            print(f"  {len(rows)} bars: {rows[0]['date']} -> {rows[-1]['date']}", flush=True)
-        except Exception as exc:
-            errors.append({"symbol": fund["symbol"], "error": str(exc)})
-            print(f"  ERROR: {exc}", flush=True)
-        time.sleep(0.35)
+    print(f"Fetching {len(funds)} ETFs concurrently (max 4 connections) ...", flush=True)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = {pool.submit(fetch_etf, fund, fund["listed_date"], end): fund for fund in funds}
+        completed = 0
+        for future in as_completed(futures):
+            fund = futures[future]
+            completed += 1
+            try:
+                rows = future.result()
+                collected[fund["symbol"]] = rows
+                print(f"[{completed}/15] {fund['symbol']} {len(rows)} bars: {rows[0]['date']} -> {rows[-1]['date']}", flush=True)
+            except Exception as exc:
+                errors.append({"symbol": fund["symbol"], "error": str(exc)})
+                print(f"[{completed}/15] ERROR {fund['symbol']}: {exc}", flush=True)
 
     results = []
     for fund in funds:
