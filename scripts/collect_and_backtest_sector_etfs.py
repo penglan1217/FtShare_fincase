@@ -37,7 +37,7 @@ def number(value: str) -> float:
         return 0.0
 
 
-def fetch_etf(fund: dict, start: str, end: str, retries: int = 2) -> list[dict]:
+def fetch_etf(fund: dict, start: str, end: str, retries: int = 1) -> list[dict]:
     exchange, code = fund["symbol"].split(".")
     ticker = ("sh" if exchange == "SH" else "sz") + code
     # Tencent's public QFQ endpoint is queried in calendar-year slices to stay below its row cap.
@@ -60,7 +60,7 @@ def fetch_etf(fund: dict, start: str, end: str, retries: int = 2) -> list[dict]:
         last_error = None
         for attempt in range(retries):
             try:
-                with urllib.request.urlopen(request, timeout=15) as response:
+                with urllib.request.urlopen(request, timeout=6) as response:
                     payload = json.loads(response.read().decode("utf-8"))
                 data = payload.get("data") or {}
                 item = data.get(ticker) or {}
@@ -310,8 +310,8 @@ def main() -> int:
     funds = config["funds"]
     OUT.mkdir(parents=True, exist_ok=True)
     collected, errors = {}, []
-    print(f"Fetching {len(funds)} ETFs concurrently (max 4 connections) ...", flush=True)
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    print(f"Fetching {len(funds)} ETFs concurrently (max 8 connections) ...", flush=True)
+    with ThreadPoolExecutor(max_workers=8) as pool:
         futures = {pool.submit(fetch_etf, fund, fund["listed_date"], end): fund for fund in funds}
         completed = 0
         for future in as_completed(futures):
