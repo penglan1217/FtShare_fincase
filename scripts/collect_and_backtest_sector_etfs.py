@@ -194,13 +194,14 @@ def run_strategy(fund: dict, rows: list[dict], start: str, end: str) -> dict:
             "unrealized_return_pct": round(open_profit / CAPITAL * 100.0, 3),
         }
 
-    # Buy-and-hold starts at the first trading day's open on/after 2020-01-01.
-    bh_entry = effective_rows[0]
+    # Buy-and-hold starts at the first trading day's open on/after the backtest start.
+    bh_rows = [r for r in effective_rows if r["date"] >= start]
+    if not bh_rows:
+        raise RuntimeError(f"{fund['symbol']} has no buy-and-hold data from {start}")
+    bh_entry = bh_rows[0]
     bh_daily = {}
-    bh_equity = []
-    for row in effective_rows:
-        if row["date"] < bh_entry["date"]:
-            continue
+    bh_equity = [CAPITAL]
+    for row in bh_rows:
         pnl = CAPITAL * (row["close"] / bh_entry["open"] - 1.0)
         bh_daily[row["date"]] = pnl
         bh_equity.append(CAPITAL + pnl)
@@ -294,9 +295,9 @@ def main() -> int:
         bh = sum(r["annual_buy_hold_pnl"].get(y, 0.0) for r in results)
         annual_portfolio.append({
             "year": y,
-            "strategy_pnl_300k_cny": round(strat, 2),
-            "buy_hold_pnl_300k_cny": round(bh, 2),
-            "excess_pnl_300k_cny": round(strat - bh, 2),
+            "strategy_pnl_all_funds_cny": round(strat, 2),
+            "buy_hold_pnl_all_funds_cny": round(bh, 2),
+            "excess_pnl_all_funds_cny": round(strat - bh, 2),
             "strategy_pnl_20k_total_cny": round(strat / len(funds), 2),
             "buy_hold_pnl_20k_total_cny": round(bh / len(funds), 2),
         })
@@ -304,16 +305,17 @@ def main() -> int:
     all_dates = sorted({d for r in results for d in r["daily_strategy_pnl"]})
     total_strategy = sum(r["summary"]["strategy_pnl_cny"] for r in results)
     total_bh = sum(r["summary"]["buy_hold_pnl_cny"] for r in results)
+    total_capital = CAPITAL * len(results)
     all_trades = [t for r in results for t in r["trades"]]
     portfolio = {
         "fund_count_expected": len(funds),
         "fund_count_collected": len(results),
-        "total_initial_capital_300k_cny": round(CAPITAL * len(funds), 2),
-        "strategy_pnl_300k_cny": round(total_strategy, 2),
-        "strategy_return_on_300k_pct": round(total_strategy / (CAPITAL * len(funds)) * 100.0, 2),
-        "buy_hold_pnl_300k_cny": round(total_bh, 2),
-        "buy_hold_return_on_300k_pct": round(total_bh / (CAPITAL * len(funds)) * 100.0, 2),
-        "excess_vs_buy_hold_300k_cny": round(total_strategy - total_bh, 2),
+        "total_initial_capital_cny": round(total_capital, 2),
+        "strategy_pnl_cny": round(total_strategy, 2),
+        "strategy_return_pct": round(total_strategy / total_capital * 100.0, 2),
+        "buy_hold_pnl_cny": round(total_bh, 2),
+        "buy_hold_return_pct": round(total_bh / total_capital * 100.0, 2),
+        "excess_vs_buy_hold_cny": round(total_strategy - total_bh, 2),
         "strategy_pnl_20k_total_equal_weight_cny": round(total_strategy / len(funds), 2),
         "buy_hold_pnl_20k_total_equal_weight_cny": round(total_bh / len(funds), 2),
         "strategy_max_drawdown_pct": round(portfolio_drawdown(results, "daily_strategy_pnl", CAPITAL, all_dates), 2),
@@ -342,8 +344,8 @@ def main() -> int:
         "",
         "| 指标 | 四线策略 | 买入持有 |",
         "|---|---:|---:|",
-        f"| 30万元总本金累计盈亏 | {portfolio['strategy_pnl_300k_cny']:,.2f}元 | {portfolio['buy_hold_pnl_300k_cny']:,.2f}元 |",
-        f"| 30万元总本金收益率 | {portfolio['strategy_return_on_300k_pct']:.2f}% | {portfolio['buy_hold_return_on_300k_pct']:.2f}% |",
+        f"| {portfolio['total_initial_capital_cny']:,.0f}元总本金累计盈亏 | {portfolio['strategy_pnl_cny']:,.2f}元 | {portfolio['buy_hold_pnl_cny']:,.2f}元 |",
+        f"| {portfolio['total_initial_capital_cny']:,.0f}元总本金收益率 | {portfolio['strategy_return_pct']:.2f}% | {portfolio['buy_hold_return_pct']:.2f}% |
         f"| 2万元总本金等权盈亏 | {portfolio['strategy_pnl_20k_total_equal_weight_cny']:,.2f}元 | {portfolio['buy_hold_pnl_20k_total_equal_weight_cny']:,.2f}元 |",
         f"| 最大回撤 | {portfolio['strategy_max_drawdown_pct']:.2f}% | {portfolio['buy_hold_max_drawdown_pct']:.2f}% |",
         f"| 已平仓交易数 | {portfolio['closed_trades']} | — |",
@@ -370,7 +372,7 @@ def main() -> int:
     ]
     for y in annual_portfolio:
         report_lines.append(
-            f"| {y['year']} | {y['strategy_pnl_300k_cny']:,.2f} | {y['buy_hold_pnl_300k_cny']:,.2f} | "
+            f"| {y['year']} | {y['strategy_pnl_all_funds_cny']:,.2f} | {y['buy_hold_pnl_all_funds_cny']:,.2f} | "
             f"{y['strategy_pnl_20k_total_cny']:,.2f} | {y['buy_hold_pnl_20k_total_cny']:,.2f} |"
         )
     if errors:
