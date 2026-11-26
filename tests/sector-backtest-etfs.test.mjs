@@ -14,6 +14,7 @@ test('sector backtest universe contains 15 uniquely identified Chinese ETFs', ()
   for (const fund of config.funds) {
     assert.match(fund.symbol, /^\d{6}\.(SH|SZ)$/);
     assert.match(fund.code, /^\d{6}$/);
+    assert.equal(fund.symbol.slice(0, 6), fund.code);
     assert.match(fund.full_name, /[\u4e00-\u9fff]/);
     assert.match(fund.display_name, /[\u4e00-\u9fff]/);
     assert.match(fund.industry, /[\u4e00-\u9fff]/);
