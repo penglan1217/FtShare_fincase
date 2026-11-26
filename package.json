@@ -30,7 +30,8 @@
     "mac:check": "node --env-file-if-exists=.env scripts/mac-check.mjs",
     "build:pages": "npm run build && node scripts/build-pages.mjs",
     "cloud:update": "node scripts/cloud-update.mjs update",
-    "cloud:restore": "node scripts/cloud-update.mjs restore"
+    "cloud:restore": "node scripts/cloud-update.mjs restore",
+    "collect:sector-etfs": "node --env-file-if-exists=.env scripts/collect-sector-backtest-etfs.mjs"
   },
   "devDependencies": {
     "wrangler": "4.160.0"
