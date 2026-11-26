@@ -345,7 +345,7 @@ def main() -> int:
         "| 指标 | 四线策略 | 买入持有 |",
         "|---|---:|---:|",
         f"| {portfolio['total_initial_capital_cny']:,.0f}元总本金累计盈亏 | {portfolio['strategy_pnl_cny']:,.2f}元 | {portfolio['buy_hold_pnl_cny']:,.2f}元 |",
-        f"| {portfolio['total_initial_capital_cny']:,.0f}元总本金收益率 | {portfolio['strategy_return_pct']:.2f}% | {portfolio['buy_hold_return_pct']:.2f}% |
+        f"| {portfolio['total_initial_capital_cny']:,.0f}元总本金收益率 | {portfolio['strategy_return_pct']:.2f}% | {portfolio['buy_hold_return_pct']:.2f}% |",
         f"| 2万元总本金等权盈亏 | {portfolio['strategy_pnl_20k_total_equal_weight_cny']:,.2f}元 | {portfolio['buy_hold_pnl_20k_total_equal_weight_cny']:,.2f}元 |",
         f"| 最大回撤 | {portfolio['strategy_max_drawdown_pct']:.2f}% | {portfolio['buy_hold_max_drawdown_pct']:.2f}% |",
         f"| 已平仓交易数 | {portfolio['closed_trades']} | — |",
