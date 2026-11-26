@@ -1,0 +1,211 @@
+{
+  "schema": 1,
+  "title": "15只行业ETF四线趋势策略历史回测池",
+  "provider": "FtShare",
+  "range": {
+    "start": "2020-01-01",
+    "end": "latest_completed_cn_trading_day"
+  },
+  "collection": {
+    "interval_unit": "Day",
+    "adjust_kind": "Forward",
+    "window_months": 12,
+    "concurrency": 2
+  },
+  "strategy": {
+    "initial_capital_per_fund_cny": 20000,
+    "ma_periods": [
+      5,
+      10,
+      20,
+      60
+    ],
+    "entry": "当日复权收盘价同时高于MA5、MA10、MA20、MA60，收盘确认后下一交易日开盘买入",
+    "exit": "当日复权收盘价同时低于MA5、MA10、MA20、MA60，收盘确认后下一交易日开盘卖出",
+    "execution": "next_trading_day_open",
+    "transaction_costs_bps": 0,
+    "distributions": "使用FtShare前复权日K线；按复权开盘价模拟次日成交，收益为价格复权口径"
+  },
+  "funds": [
+    {
+      "symbol": "512480.SH",
+      "code": "512480",
+      "full_name": "国联安中证全指半导体产品与设备交易型开放式指数证券投资基金",
+      "short_name": "国联安半导体ETF",
+      "display_name": "半导体ETF（国联安）",
+      "industry": "半导体设备与材料",
+      "tracking_index_name": "中证全指半导体产品与设备指数",
+      "inception_date": "2019-05-08",
+      "listed_date": "2019-06-12",
+      "source_url": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-05-15/512480_20260515_7GY6.pdf"
+    },
+    {
+      "symbol": "159995.SZ",
+      "code": "159995",
+      "full_name": "华夏国证半导体芯片交易型开放式指数证券投资基金",
+      "short_name": "华夏国证半导体芯片ETF",
+      "display_name": "芯片ETF（华夏）",
+      "industry": "半导体芯片",
+      "tracking_index_name": "国证半导体芯片指数",
+      "inception_date": "2020-01-20",
+      "listed_date": "2020-02-10",
+      "source_url": "https://static.cninfo.com.cn/finalpage/2026-03-23/1225020369.PDF"
+    },
+    {
+      "symbol": "159819.SZ",
+      "code": "159819",
+      "full_name": "易方达中证人工智能主题交易型开放式指数证券投资基金",
+      "short_name": "易方达中证人工智能主题ETF",
+      "display_name": "人工智能ETF（易方达）",
+      "industry": "人工智能",
+      "tracking_index_name": "中证人工智能主题指数",
+      "inception_date": "2020-07-27",
+      "listed_date": "2020-09-23",
+      "source_url": "https://static.cninfo.com.cn/finalpage/2026-08-11/1225467497.PDF"
+    },
+    {
+      "symbol": "562500.SH",
+      "code": "562500",
+      "full_name": "华夏中证机器人交易型开放式指数证券投资基金",
+      "short_name": "华夏中证机器人ETF",
+      "display_name": "机器人ETF（华夏）",
+      "industry": "机器人",
+      "tracking_index_name": "中证机器人指数",
+      "inception_date": "2021-12-17",
+      "listed_date": "2021-12-29",
+      "source_url": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-03-23/562500_20260323_MWJW.pdf"
+    },
+    {
+      "symbol": "515880.SH",
+      "code": "515880",
+      "full_name": "国泰中证全指通信设备交易型开放式指数证券投资基金",
+      "short_name": "国泰中证全指通信设备ETF",
+      "display_name": "通信设备ETF（国泰）",
+      "industry": "通信设备",
+      "tracking_index_name": "中证全指通信设备指数",
+      "inception_date": "2019-08-16",
+      "listed_date": "2019-09-06",
+      "source_url": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2022-03-30/515880_20220330_1_qp25HTI2.pdf"
+    },
+    {
+      "symbol": "512720.SH",
+      "code": "512720",
+      "full_name": "国泰中证计算机主题交易型开放式指数证券投资基金",
+      "short_name": "国泰中证计算机主题ETF",
+      "display_name": "计算机ETF（国泰）",
+      "industry": "计算机",
+      "tracking_index_name": "中证计算机主题指数",
+      "inception_date": "2019-07-11",
+      "listed_date": "2019-08-16",
+      "source_url": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-03-19/512720_20260319_YDF8.pdf"
+    },
+    {
+      "symbol": "512880.SH",
+      "code": "512880",
+      "full_name": "国泰中证全指证券公司交易型开放式指数证券投资基金",
+      "short_name": "国泰中证全指证券公司ETF",
+      "display_name": "证券ETF（国泰）",
+      "industry": "证券",
+      "tracking_index_name": "中证全指证券公司指数",
+      "inception_date": "2016-07-26",
+      "listed_date": "2016-08-08",
+      "source_url": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-03-19/512880_20260319_0VC8.pdf"
+    },
+    {
+      "symbol": "512800.SH",
+      "code": "512800",
+      "full_name": "华宝中证银行交易型开放式指数证券投资基金",
+      "short_name": "华宝中证银行ETF",
+      "display_name": "银行ETF（华宝）",
+      "industry": "银行",
+      "tracking_index_name": "中证银行指数",
+      "inception_date": "2017-07-18",
+      "listed_date": "2017-08-03",
+      "source_url": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2025-07-05/512800_20250705_C0UK.pdf"
+    },
+    {
+      "symbol": "159611.SZ",
+      "code": "159611",
+      "full_name": "广发中证全指电力公用事业交易型开放式指数证券投资基金",
+      "short_name": "广发中证全指电力ETF",
+      "display_name": "电力ETF（广发）",
+      "industry": "电力公用事业",
+      "tracking_index_name": "中证全指电力公用事业指数",
+      "inception_date": "2021-12-29",
+      "listed_date": "2022-01-07",
+      "source_url": "https://static.cninfo.com.cn/finalpage/2026-07-06/1225408321.PDF"
+    },
+    {
+      "symbol": "515790.SH",
+      "code": "515790",
+      "full_name": "华泰柏瑞中证光伏产业交易型开放式指数证券投资基金",
+      "short_name": "华泰柏瑞中证光伏产业ETF",
+      "display_name": "光伏ETF（华泰柏瑞）",
+      "industry": "光伏",
+      "tracking_index_name": "中证光伏产业指数",
+      "inception_date": "2020-12-07",
+      "listed_date": "2020-12-18",
+      "source_url": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2024-06-22/515790_20240622_429S.pdf"
+    },
+    {
+      "symbol": "159840.SZ",
+      "code": "159840",
+      "full_name": "工银瑞信国证新能源车电池交易型开放式指数证券投资基金",
+      "short_name": "工银瑞信国证新能源车电池ETF",
+      "display_name": "锂电池ETF（工银瑞信）",
+      "industry": "新能源汽车电池（锂电池）",
+      "tracking_index_name": "国证新能源车电池指数",
+      "inception_date": "2021-08-05",
+      "listed_date": "2021-08-20",
+      "source_url": "https://www.icbc.com.cn/icbc/%E7%BD%91%E4%B8%8A%E5%9F%BA%E9%87%91/%E5%9F%BA%E9%87%91%E5%B9%B3%E5%8F%B0/%E5%9F%BA%E9%87%91%E5%85%AC%E5%91%8A/DECLARE_TIME_015874_%E5%B7%A5%E9%93%B6%E7%91%9E%E4%BF%A1%E5%9B%BD%E8%AF%81%E6%96%B0%E8%83%BD%E6%BA%90%E8%BD%A6%E7%94%B5%E6%B1%A0%E4%BA%A4%E6%98%93%E5%9E%8B%E5%BC%80%E6%94%BE%E5%BC%8F%E6%8C%87%E6%95%B0%E8%AF%81%E5%88%B8%E6%8A%95%E8%B5%84%E5%9F%BA%E9%87%91%E5%8F%91%E8%B5%B7%E5%BC%8F%E8%81%94%E6%8E%A5%E5%9F%BA%E9%87%912022%E5%B9%B4%E7%AC%AC3%E5%AD%A3%E5%BA%A6%E6%8A%A5%E5%91%8A_3026063.htm"
+    },
+    {
+      "symbol": "512400.SH",
+      "code": "512400",
+      "full_name": "南方中证申万有色金属交易型开放式指数证券投资基金",
+      "short_name": "南方中证申万有色金属ETF",
+      "display_name": "有色金属ETF（南方）",
+      "industry": "有色金属",
+      "tracking_index_name": "中证申万有色金属指数",
+      "inception_date": "2017-08-03",
+      "listed_date": "2017-09-01",
+      "source_url": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2025-03-21/512400_20250321_3WPD.pdf"
+    },
+    {
+      "symbol": "518880.SH",
+      "code": "518880",
+      "full_name": "华安易富黄金交易型开放式证券投资基金",
+      "short_name": "华安黄金ETF",
+      "display_name": "黄金ETF（华安）",
+      "industry": "黄金",
+      "tracking_index_name": "上海黄金交易所Au99.99黄金现货价格",
+      "inception_date": "2013-07-18",
+      "listed_date": "2013-07-29",
+      "source_url": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-03-17/518880_20260317_QR4M.pdf"
+    },
+    {
+      "symbol": "159992.SZ",
+      "code": "159992",
+      "full_name": "银华中证创新药产业交易型开放式指数证券投资基金",
+      "short_name": "银华中证创新药产业ETF",
+      "display_name": "创新药ETF（银华）",
+      "industry": "创新药",
+      "tracking_index_name": "中证创新药产业指数",
+      "inception_date": "2020-03-20",
+      "listed_date": "2020-04-10",
+      "source_url": "https://static.cninfo.com.cn/finalpage/2026-03-27/1225037891.PDF"
+    },
+    {
+      "symbol": "159928.SZ",
+      "code": "159928",
+      "full_name": "中证主要消费交易型开放式指数证券投资基金",
+      "short_name": "汇添富中证主要消费ETF",
+      "display_name": "主要消费ETF（汇添富）",
+      "industry": "主要消费",
+      "tracking_index_name": "中证主要消费指数",
+      "inception_date": "2013-08-23",
+      "listed_date": "2013-09-16",
+      "source_url": "https://disc.static.szse.cn/disc/disk03/finalpage/2026-08-07/b471e197-562c-4632-9acd-af9d2984935f.PDF"
+    }
+  ]
+}
