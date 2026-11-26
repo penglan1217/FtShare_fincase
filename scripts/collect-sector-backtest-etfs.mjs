@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -162,12 +162,12 @@ if (process.argv.includes('--help')) {
       trading_days: calendar.filter(date => date >= config.range.start && date <= end).length
     },
     collection: config.collection,
+    price_basis: 'forward_adjusted_daily_ohlc',
     strategy: config.strategy,
     calendar,
     funds,
     source_audit: {
       endpoints_used: [...toolsUsed],
-      premium_endpoints_used: [],
       requests: client.stats(),
       incomplete_funds: incomplete,
       coverage: Object.fromEntries(collected.map(fund => [fund.symbol, fund.coverage]))
@@ -202,9 +202,10 @@ if (process.argv.includes('--help')) {
 
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath + '.tmp', compressed, { mode: 0o600 });
-  const { rename } = await import('node:fs/promises');
   await rename(outputPath + '.tmp', outputPath);
-  await writeFile(outputPath.replace(/\.json\.gz$/, '.manifest.json'), JSON.stringify(manifest, null, 2) + '\n', { mode: 0o600 });
+  const manifestPath = process.env.SECTOR_ETF_MANIFEST_FILE || outputPath.replace(/\.json\.gz$/, '.manifest.json');
+  await mkdir(dirname(resolve(root, manifestPath)), { recursive: true });
+  await writeFile(resolve(root, manifestPath), JSON.stringify(manifest, null, 2) + '\n', { mode: 0o600 });
 
   console.log(JSON.stringify({
     status: incomplete ? 'collected_with_gaps' : 'collected_complete',
