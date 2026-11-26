@@ -51,7 +51,7 @@ def fetch_etf(fund: dict, start: str, end: str, retries: int = 1) -> list[dict]:
         if window_start > window_end:
             continue
         param = f"{ticker},day,{window_start},{window_end},500,qfq"
-        url = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?" + urllib.parse.urlencode({"param": param})
+        url = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?" + urllib.parse.urlencode({"_var": "kline_dayqfq", "param": param})
         request = urllib.request.Request(url, headers={
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128 Safari/537.36",
             "Referer": "https://gu.qq.com/",
@@ -61,7 +61,10 @@ def fetch_etf(fund: dict, start: str, end: str, retries: int = 1) -> list[dict]:
         for attempt in range(retries):
             try:
                 with urllib.request.urlopen(request, timeout=6) as response:
-                    payload = json.loads(response.read().decode("utf-8"))
+                    raw = response.read().decode("utf-8").strip()
+                if not raw.startswith("{"):
+                    raw = raw[raw.find("=") + 1:].rstrip(";")
+                payload = json.loads(raw)
                 data = payload.get("data") or {}
                 item = data.get(ticker) or {}
                 klines = item.get("qfqday") or item.get("day") or []
