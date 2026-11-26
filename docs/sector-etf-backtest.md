@@ -48,3 +48,7 @@ npm run collect:sector-etfs -- --end 2026-11-24
 ## 数据来源
 
 每只ETF的基金名称和上市日期核验来源记录在 config/sector-backtest-etfs.json 的 source_url 字段。行情由用户自己的 FtShare 账户按该项目现有客户端采集。
+
+## 从 GitHub Actions 运行
+
+合并本变更后，可在 GitHub 仓库的 Actions 页面手动运行“15只行业ETF历史行情采集”。运行前需在仓库 Settings → Secrets and variables → Actions 中添加仓库密钥 FTSHARE_API_KEY。工作流会先运行 npm test，再采集行情并将压缩历史数据及清单作为 30 天有效期的 workflow artifact 上传；不会把私有行情写入 Git 提交。
