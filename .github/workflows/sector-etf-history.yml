@@ -30,8 +30,8 @@ jobs:
 
       - name: Collect historical ETF candles
         env:
-          FTSHARE_API_KEY: \${{ secrets.FTSHARE_API_KEY }}
-          SECTOR_ETF_END_DATE: \${{ inputs.end_date }}
+          FTSHARE_API_KEY: ${{ secrets.FTSHARE_API_KEY }}
+          SECTOR_ETF_END_DATE: ${{ inputs.end_date }}
         run: |
           if [ -z "$FTSHARE_API_KEY" ]; then
             echo "::error::请先在仓库 Secrets 中配置 FTSHARE_API_KEY。"
