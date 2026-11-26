@@ -1,50 +1,57 @@
-name: 15只行业ETF历史行情采集
+name: 15只行业ETF四线趋势历史回测
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/sector-etf-history.yml"
+      - "scripts/collect_and_backtest_sector_etfs.py"
+      - "config/sector-backtest-etfs.json"
   workflow_dispatch:
     inputs:
       end_date:
-        description: "回测行情截止日（YYYY-MM-DD，留空则使用最近已完成交易日）"
+        description: "行情截止日 YYYY-MM-DD；留空则自动使用中国当前日期"
         required: false
         type: string
 
+permissions:
+  contents: read
+
+concurrency:
+  group: sector-etf-backtest
+  cancel-in-progress: false
+
 jobs:
-  collect:
+  collect-and-backtest:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          node-version: 24
-          cache: npm
+          python-version: "3.12"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Validate script
+        run: python -m py_compile scripts/collect_and_backtest_sector_etfs.py
 
-      - name: Validate configuration and tests
-        run: npm test
-
-      - name: Collect historical ETF candles
+      - name: Fetch public ETF history and run four-MA backtest
         env:
-          FTSHARE_API_KEY: ${{ secrets.FTSHARE_API_KEY }}
-          SECTOR_ETF_END_DATE: ${{ inputs.end_date }}
+          END_DATE: ${{ inputs.end_date }}
         run: |
-          if [ -z "$FTSHARE_API_KEY" ]; then
-            echo "::error::请先在仓库 Secrets 中配置 FTSHARE_API_KEY。"
-            exit 1
+          if [ -n "$END_DATE" ]; then
+            python scripts/collect_and_backtest_sector_etfs.py --start 2020-01-01 --end "$END_DATE"
+          else
+            python scripts/collect_and_backtest_sector_etfs.py --start 2020-01-01
           fi
-          npm run collect:sector-etfs
 
-      - name: Upload private history archive
+      - name: Upload full history, trades and reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sector-etf-backtest-history
-          path: |
-            data/private/sector-etf-backtest.json.gz
-            data/private/sector-etf-backtest.manifest.json
-          if-no-files-found: error
+          name: sector-etf-four-ma-backtest
+          path: artifacts/sector-etf-backtest/
+          if-no-files-found: warn
           retention-days: 30
