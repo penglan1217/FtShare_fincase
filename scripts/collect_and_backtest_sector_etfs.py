@@ -37,30 +37,77 @@ def number(value: str) -> float:
         return 0.0
 
 
-def fetch_etf(fund: dict, start: str, end: str, retries: int = 3) -> list[dict]:
+def fetch_etf(fund: dict, start: str, end: str, retries: int = 2) -> list[dict]:
     exchange, code = fund["symbol"].split(".")
-    secid = ("1." if exchange == "SH" else "0.") + code
-    params = {
-        "secid": secid, "klt": "101", "fqt": "1",
-        "beg": start.replace("-", ""), "end": end.replace("-", ""),
-        "lmt": "10000", "fields1": FIELDS1, "fields2": FIELDS2, "ut": UT,
-    }
-    url = BASE_URL + "?" + urllib.parse.urlencode(params)
-    request = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128 Safari/537.36",
-        "Referer": "https://quote.eastmoney.com/",
-        "Accept": "application/json,text/plain,*/*",
-    })
-    last_error = None
-    for attempt in range(retries):
+    ticker = ("sh" if exchange == "SH" else "sz") + code
+    # Tencent's public QFQ endpoint is queried in calendar-year slices to stay below its row cap.
+    first_year = max(int(start[:4]), int(fund["listed_date"][:4]), 2019)
+    last_year = int(end[:4])
+    rows = []
+    errors = []
+    for year in range(first_year, last_year + 1):
+        window_start = max(f"{year}-01-01", fund["listed_date"], start)
+        window_end = min(f"{year}-12-31", end)
+        if window_start > window_end:
+            continue
+        param = f"{ticker},day,{window_start},{window_end},500,qfq"
+        url = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?" + urllib.parse.urlencode({"param": param})
+        request = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128 Safari/537.36",
+            "Referer": "https://gu.qq.com/",
+            "Accept": "application/json,text/plain,*/*",
+        })
+        last_error = None
+        for attempt in range(retries):
+            try:
+                with urllib.request.urlopen(request, timeout=15) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+                data = payload.get("data") or {}
+                item = data.get(ticker) or {}
+                klines = item.get("qfqday") or item.get("day") or []
+                if not klines:
+                    raise RuntimeError("Tencent returned no qfqday: " + json.dumps(payload, ensure_ascii=False)[:400])
+                for bar in klines:
+                    p = bar.split(",") if isinstance(bar, str) else bar
+                    if len(p) < 6:
+                        continue
+                    d = str(p[0])
+                    if d < fund["listed_date"] or d > end:
+                        continue
+                    o, c = number(p[1]), number(p[2])
+                    if o <= 0 or c <= 0:
+                        continue
+                    rows.append({
+                        "date": d, "open": o, "close": c,
+                        "high": number(p[3]), "low": number(p[4]),
+                        "volume": number(p[5]),
+                        "amount": number(p[6]) if len(p) > 6 else 0.0,
+                    })
+                last_error = None
+                break
+            except Exception as exc:
+                last_error = exc
+                if attempt + 1 < retries:
+                    time.sleep(1.0 * (attempt + 1))
+        if last_error is not None:
+            errors.append(f"{year}: {last_error}")
+        time.sleep(0.1)
+    if not rows:
+        # Eastmoney is a secondary public fallback; no user key is required.
+        params = {
+            "secid": ("1." if exchange == "SH" else "0.") + code, "klt": "101", "fqt": "1",
+            "beg": start.replace("-", ""), "end": end.replace("-", ""),
+            "lmt": "10000", "fields1": FIELDS1, "fields2": FIELDS2, "ut": UT,
+        }
+        url = BASE_URL + "?" + urllib.parse.urlencode(params)
+        request = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128 Safari/537.36",
+            "Referer": "https://quote.eastmoney.com/", "Accept": "application/json,text/plain,*/*",
+        })
         try:
-            with urllib.request.urlopen(request, timeout=18) as response:
+            with urllib.request.urlopen(request, timeout=15) as response:
                 payload = json.loads(response.read().decode("utf-8"))
-            data = payload.get("data") or {}
-            klines = data.get("klines") or []
-            if not klines:
-                raise RuntimeError("Eastmoney returned no klines: " + json.dumps(payload, ensure_ascii=False)[:500])
-            rows = []
+            klines = (payload.get("data") or {}).get("klines") or []
             for item in klines:
                 p = item.split(",")
                 if len(p) < 6:
@@ -69,26 +116,19 @@ def fetch_etf(fund: dict, start: str, end: str, retries: int = 3) -> list[dict]:
                 if d < fund["listed_date"] or d > end:
                     continue
                 o, c = number(p[1]), number(p[2])
-                if o <= 0 or c <= 0:
-                    continue
-                rows.append({
-                    "date": d, "open": o, "close": c,
-                    "high": number(p[3]), "low": number(p[4]),
-                    "volume": number(p[5]),
-                    "amount": number(p[6]) if len(p) > 6 else 0.0,
-                })
-            rows.sort(key=lambda x: x["date"])
-            dedup = {r["date"]: r for r in rows}
-            result = [dedup[k] for k in sorted(dedup)]
-            if len(result) < 60:
-                raise RuntimeError(f"Only {len(result)} daily bars returned")
-            return result
+                if o > 0 and c > 0:
+                    rows.append({
+                        "date": d, "open": o, "close": c,
+                        "high": number(p[3]), "low": number(p[4]),
+                        "volume": number(p[5]), "amount": number(p[6]) if len(p) > 6 else 0.0,
+                    })
         except Exception as exc:
-            last_error = exc
-            if attempt + 1 < retries:
-                time.sleep(1.5 * (attempt + 1))
-    raise RuntimeError(f"{fund['symbol']} fetch failed after {retries} attempts: {last_error}")
-
+            errors.append("Eastmoney fallback: " + str(exc))
+    dedup = {r["date"]: r for r in rows}
+    result = [dedup[k] for k in sorted(dedup)]
+    if len(result) < 60:
+        raise RuntimeError(f"{fund['symbol']} insufficient history ({len(result)} bars); " + "; ".join(errors))
+    return result
 
 def moving_average(values: list[float], end_index: int, period: int) -> float:
     return sum(values[end_index - period + 1:end_index + 1]) / period
@@ -337,7 +377,7 @@ def main() -> int:
     report_lines = [
         "# 15只行业ETF四线趋势回测",
         "",
-        f"- 数据源：东方财富公开日K接口，前复权（fqt=1）；抓取时间：{datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds')}",
+        f"- 数据源：腾讯公开日K接口，前复权（qfqday）；东方财富作为备用；抓取时间：{datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds')}",
         f"- 回测区间：{start} 至 {end}；实际数据截止日以每只ETF coverage_end 为准。",
         f"- 样本：{len(results)}/{len(funds)} 只ETF；缺失：{len(errors)} 只。",
         "- 规则：收盘价同时高于MA5/10/20/60，次日开盘买入；收盘价同时低于四条均线，次日开盘卖出。",
@@ -389,12 +429,12 @@ def main() -> int:
         "",
         "东方财富接口返回的前复权日K用于均线和次日开盘成交模拟。年度盈亏为每年末策略累计权益相对上一年末的变化；未平仓持仓按当年最后一个交易日收盘价计入浮动盈亏。每笔交易固定使用2万元本金，不将历史盈利滚入下一笔。买入持有同样以每只2万元本金计算。",
         "",
-        "数据源说明：公开接口及字段参数参考 https://github.com/NotWizard/MACRO/blob/main/docs/data-sources-guide.md 。",
+        "数据源说明：腾讯公开 QFQ 日K接口；若该接口无数据，则尝试东方财富公开日K接口。",
     ]
     report = "\n".join(report_lines) + "\n"
 
     output = {
-        "schema": 1, "source": "Eastmoney public kline API",
+        "schema": 1, "source": "Tencent public QFQ API (Eastmoney fallback)",
         "adjustment": "qfq / forward adjusted (fqt=1)",
         "start": start, "end_requested": end,
         "generated_at": datetime.now(ZoneInfo("Asia/Shanghai")).isoformat(timespec="seconds"),
@@ -408,7 +448,7 @@ def main() -> int:
     (OUT / "backtest.json").write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
     (OUT / "history.json.gz").write_bytes(gzip.compress(json.dumps(collected, ensure_ascii=False, separators=(",", ":")).encode("utf-8")))
     (OUT / "manifest.json").write_text(json.dumps({
-        "source": "Eastmoney public daily K-line API", "adjustment": "qfq (fqt=1)",
+        "source": "Tencent public daily QFQ K-line API; Eastmoney fallback", "adjustment": "qfq",
         "requested_start": start, "requested_end": end,
         "funds_expected": len(funds), "funds_collected": len(results), "errors": errors,
         "fund_coverage": {sym: {"start": rows[0]["date"], "end": rows[-1]["date"], "bars": len(rows)}
